@@ -27,8 +27,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "buttons.h"
-#include "st7789.h"
+#include "load_control.h"
+#include "discharge_session.h"
+#include "ui.h"
 
 /* USER CODE END Includes */
 
@@ -98,16 +99,14 @@ int main(void)
   MX_ADC2_Init();
   MX_DAC1_Init();
   MX_SPI2_Init();
-
   /* USER CODE BEGIN 2 */
   /* Deselect the SD card because it shares SPI2. */
   HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET);
 
-  ST7789_Init();
-  ST7789_WriteString(20, 20, "Button test",
-                     Font_16x26, WHITE, BLACK);
-
-  Buttons_Init();
+  if (LoadControl_Init() != HAL_OK)
+      Error_Handler();
+  UI_Init();
+  Discharge_Init();
 
   /* USER CODE END 2 */
 
@@ -118,18 +117,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  Buttons_Update();
-
-	  for (unsigned int i = 0; i < BUTTON_COUNT; i++)
-	  {
-	      if (Buttons_WasPressed((ButtonId)i))
-	      {
-	          char text[2] = {(char)('1' + i), '\0'};
-
-	          ST7789_WriteString(110, 150, text,
-	                             Font_16x26, WHITE, BLACK);
-	      }
-	  }
+      LoadControl_Process();
+      Discharge_Process();
+      UI_Task();
+      LoadControl_Process();
   }
   /* USER CODE END 3 */
 }
@@ -186,6 +177,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  LoadControl_EmergencyZero();
   __disable_irq();
   while (1)
   {
